@@ -1,0 +1,221 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap");
+
+:root {
+  color-scheme: light;
+  --ink: #20231f;
+  --canvas: #fbfbf9;
+  --green: #39664e;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: "DM Sans", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+textarea {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.chat-panel {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  background:
+    radial-gradient(ellipse at 50% 43%, rgba(244, 246, 239, 0.6), transparent 49%),
+    var(--canvas);
+}
+
+.conversation {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 48px 28px 20px;
+}
+
+.welcome {
+  width: min(100%, 700px);
+  text-align: left;
+}
+
+.welcome h1 {
+  margin: 0;
+  font-family: "Manrope", sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  line-height: 1.5;
+}
+
+.welcome h1.streaming::after {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 3px;
+  background: currentColor;
+  content: "";
+  vertical-align: -0.12em;
+  animation: streaming-caret 1s steps(2, start) infinite;
+}
+
+@keyframes streaming-caret {
+  to {
+    visibility: hidden;
+  }
+}
+
+.file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.upload-button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 24px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--green);
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 150ms ease, transform 150ms ease;
+}
+
+.upload-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #2f573f;
+}
+
+.upload-button:focus-visible {
+  outline: 3px solid rgba(57, 102, 78, 0.3);
+  outline-offset: 3px;
+}
+
+.upload-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.upload-hint {
+  margin: 8px 0 0;
+  color: #858980;
+  font-size: 11px;
+}
+
+.welcome [role="alert"] {
+  color: #a33a32;
+  font-size: 14px;
+}
+
+.composer-area {
+  width: min(100% - 56px, 700px);
+  margin: 0 auto;
+  padding: 12px 0 20px;
+}
+
+.composer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 13px 10px 17px;
+  border: 1px solid #e1e3dc;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 8px 25px rgba(40, 45, 34, 0.045);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.composer:focus-within {
+  border-color: #aabdaa;
+  box-shadow: 0 8px 25px rgba(40, 45, 34, 0.055), 0 0 0 3px rgba(67, 104, 76, 0.07);
+}
+
+.composer textarea {
+  display: block;
+  min-width: 0;
+  flex: 1;
+  width: 100%;
+  min-height: 36px;
+  max-height: 140px;
+  resize: vertical;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.composer textarea::placeholder {
+  color: #a0a29b;
+}
+
+.send-button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: var(--green);
+  color: #fff;
+  cursor: pointer;
+}
+
+.send-button svg {
+  width: 17px;
+  height: 17px;
+}
+
+.send-button:disabled {
+  background: #e8ebe5;
+  color: #a4a89f;
+  cursor: default;
+}
+
+@media (max-width: 760px) {
+  .conversation {
+    padding: 32px 22px 16px;
+  }
+}
+
+@media (max-width: 420px) {
+  .conversation {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+}
