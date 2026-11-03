@@ -11,8 +11,8 @@ from backend.app import cv, main
 from backend.app.agent import (
     NO_CV_REQUEST,
     SYSTEM_PROMPT,
-    create_supervisor_graph,
-    get_supervisor_graph,
+    create_agent_graph,
+    get_agent_graph,
     stream_introduction,
 )
 
@@ -27,7 +27,7 @@ def create_docx(*paragraphs: str) -> bytes:
 
 
 def test_supervisor_graph_uses_no_cv_welcome() -> None:
-    graph = create_supervisor_graph(
+    graph = create_agent_graph(
         FakeListChatModel(responses=["Hallo, ich bin Aiden. Bitte lade deinen CV hoch."])
     )
 
@@ -42,7 +42,7 @@ def test_supervisor_graph_uses_no_cv_welcome() -> None:
 
 
 def test_supervisor_streams_model_tokens(monkeypatch) -> None:
-    graph = create_supervisor_graph(
+    graph = create_agent_graph(
         FakeListChatModel(responses=["Hallo, ich bin Aiden. Willkommen!"])
     )
     monkeypatch.setattr("backend.app.agent.get_supervisor_graph", lambda: graph)
@@ -59,7 +59,7 @@ def test_supervisor_streams_model_tokens(monkeypatch) -> None:
 def test_intro_stream_sends_metadata_tokens_and_completion(monkeypatch) -> None:
     user_id = uuid4()
     monkeypatch.setattr(main, "find_user_cv", lambda _: None)
-    graph = create_supervisor_graph(
+    graph = create_agent_graph(
         FakeListChatModel(responses=["Hallo, ich bin Aiden. Willkommen!"])
     )
     monkeypatch.setattr("backend.app.agent.get_supervisor_graph", lambda: graph)
@@ -78,7 +78,7 @@ def test_intro_stream_sends_metadata_tokens_and_completion(monkeypatch) -> None:
 def test_cv_upload_streams_personalized_greeting(monkeypatch, tmp_path) -> None:
     user_id = uuid4()
     monkeypatch.setattr(cv, "CV_DIRECTORY", tmp_path / "cv")
-    graph = create_supervisor_graph(
+    graph = create_agent_graph(
         FakeListChatModel(responses=["Hallo Ada, wie kann ich dir helfen?"])
     )
     monkeypatch.setattr("backend.app.agent.get_supervisor_graph", lambda: graph)
@@ -99,46 +99,6 @@ def test_cv_upload_streams_personalized_greeting(monkeypatch, tmp_path) -> None:
     assert events[0] == {"type": "meta", "has_cv": True}
     assert "".join(token_events) == "Hallo Ada, wie kann ich dir helfen?"
     assert events[-1] == {"type": "done"}
-
-
-def test_intro_without_cv_requests_upload(monkeypatch) -> None:
-    async def fake_introduce(cv_text: str | None = None) -> str:
-        assert cv_text is None
-        return "Hallo, ich bin Aiden. Bitte lade deinen Lebenslauf hoch."
-
-    monkeypatch.setattr(main, "introduce", fake_introduce)
-    monkeypatch.setattr(main, "find_user_cv", lambda user_id: None)
-
-    response = TestClient(main.app).get(f"/api/users/{uuid4()}/intro")
-
-    assert response.status_code == 200
-    assert response.json() == {
-        "message": "Hallo, ich bin Aiden. Bitte lade deinen Lebenslauf hoch.",
-        "has_cv": False,
-    }
-
-
-def test_intro_uses_cv_found_in_backend_cv(monkeypatch, tmp_path) -> None:
-    user_id = uuid4()
-    cv_path = tmp_path / f"{user_id}.docx"
-    cv_path.write_bytes(create_docx("Ada Beispiel", "Softwareentwicklerin"))
-    seen_cv_text: list[str | None] = []
-
-    async def fake_introduce(cv_text: str | None = None) -> str:
-        seen_cv_text.append(cv_text)
-        return "Hallo Ada, wie kann ich dir helfen?"
-
-    monkeypatch.setattr(main, "introduce", fake_introduce)
-    monkeypatch.setattr(cv, "CV_DIRECTORY", tmp_path)
-
-    response = TestClient(main.app).get(f"/api/users/{user_id}/intro")
-
-    assert response.status_code == 200
-    assert response.json() == {
-        "message": "Hallo Ada, wie kann ich dir helfen?",
-        "has_cv": True,
-    }
-    assert seen_cv_text == ["Ada Beispiel\nSoftwareentwicklerin"]
 
 
 def test_upload_stores_cv_and_returns_greeting(monkeypatch, tmp_path) -> None:
@@ -201,15 +161,24 @@ def test_upload_rejects_unsupported_file() -> None:
     assert response.status_code == 415
 
 
-def test_intro_reports_missing_model_configuration(monkeypatch) -> None:
+def test_upload_reports_missing_model_configuration(monkeypatch, tmp_path) -> None:
     async def clear_cached_graph() -> None:
-        get_supervisor_graph.cache_clear()
+        get_agent_graph.cache_clear()
 
-    monkeypatch.setattr(main, "find_user_cv", lambda user_id: None)
+    monkeypatch.setattr(cv, "CV_DIRECTORY", tmp_path / "cv")
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     asyncio.run(clear_cached_graph())
 
-    response = TestClient(main.app).get(f"/api/users/{uuid4()}/intro")
+    response = TestClient(main.app).post(
+        f"/api/users/{uuid4()}/cv",
+        files={
+            "file": (
+                "lebenslauf.docx",
+                create_docx("Ada Beispiel"),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
+    )
 
     assert response.status_code == 503
     assert response.json()["detail"] == "OPENAI_API_KEY is not configured."

@@ -13,7 +13,7 @@ from openai import APIError
 from pydantic import BaseModel
 from starlette.responses import StreamingResponse
 
-from backend.app.agent import get_supervisor_graph, introduce, stream_introduction
+from backend.app.agent import get_agent_graph, introduce, stream_introduction
 from backend.app.cv import extract_cv_text, find_user_cv, save_user_cv
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
@@ -57,13 +57,17 @@ def encode_stream_event(event: dict[str, object]) -> bytes:
 
 
 async def introduction_events(
-    cv_text: str | None,
     has_cv: bool,
 ) -> AsyncIterator[bytes]:
+    """Stream introduction events as JSON lines:
+    {"type": "meta", "has_cv": true/false}
+    {"type": "token", "text": "..."}
+    {"type": "done"} or {"type": "error", "message": message}
+    """
     yield encode_stream_event({"type": "meta", "has_cv": has_cv})
     received_text = False
     try:
-        async for text in stream_introduction(cv_text):
+        async for text in stream_introduction(has_cv):
             received_text = True
             yield encode_stream_event({"type": "token", "text": text})
         if not received_text:
@@ -79,14 +83,16 @@ async def introduction_events(
         yield encode_stream_event({"type": "error", "message": message})
 
 
-def stream_response(cv_text: str | None, has_cv: bool) -> StreamingResponse:
+def stream_response(has_cv: bool) -> StreamingResponse:
+    # check if agent graph is ok
     try:
-        get_supervisor_graph()
+        get_agent_graph()
     except RuntimeError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
 
+    # stream jsons line by line
     return StreamingResponse(
-        introduction_events(cv_text, has_cv),
+        introduction_events(has_cv),
         media_type="application/x-ndjson",
         headers={
             "Cache-Control": "no-cache, no-transform",
@@ -95,19 +101,10 @@ def stream_response(cv_text: str | None, has_cv: bool) -> StreamingResponse:
     )
 
 
-@app.get("/api/users/{user_id}/intro", response_model=IntroductionResponse)
-async def get_introduction(user_id: UUID) -> IntroductionResponse:
-    cv_path = find_user_cv(user_id)
-    cv_text = await extract_cv_text(cv_path) if cv_path is not None else None
-    message = await create_introduction(cv_text)
-    return IntroductionResponse(message=message, has_cv=cv_path is not None)
-
-
 @app.get("/api/users/{user_id}/intro/stream")
 async def get_introduction_stream(user_id: UUID) -> StreamingResponse:
     cv_path = find_user_cv(user_id)
-    cv_text = await extract_cv_text(cv_path) if cv_path is not None else None
-    return stream_response(cv_text, has_cv=cv_path is not None)
+    return stream_response(has_cv=cv_path is not None)
 
 
 @app.post("/api/users/{user_id}/cv", response_model=IntroductionResponse)

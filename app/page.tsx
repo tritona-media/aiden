@@ -88,6 +88,22 @@ function getApiUrl() {
   ).replace(/\/$/, "");
 }
 
+function getOrCreateUserId(): string {
+  const storedUserId = localStorage.getItem("aiden-user-id");
+  const isValidUserId =
+    storedUserId !== null &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      storedUserId,
+    );
+  const currentUserId = isValidUserId ? storedUserId : crypto.randomUUID();
+
+  if (!isValidUserId) {
+    localStorage.setItem("aiden-user-id", currentUserId);
+  }
+
+  return currentUserId;
+}
+
 export default function Home() {
   const [welcomeMessage, setWelcomeMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -104,18 +120,7 @@ export default function Home() {
 
     async function loadWelcomeMessage() {
       try {
-        const storedUserId = localStorage.getItem("aiden-user-id");
-        const validUserId =
-          storedUserId &&
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-            storedUserId,
-          )
-            ? storedUserId
-            : null;
-        const currentUserId = validUserId ?? crypto.randomUUID();
-        if (!validUserId) {
-          localStorage.setItem("aiden-user-id", currentUserId);
-        }
+        const currentUserId = getOrCreateUserId();
         setUserId(currentUserId);
 
         const response = await fetch(

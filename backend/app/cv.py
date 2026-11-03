@@ -18,10 +18,9 @@ MAX_DOCX_UNCOMPRESSED_BYTES = 25 * 1024 * 1024
 
 
 def find_user_cv(user_id: UUID) -> Path | None:
-    for extension in ALLOWED_EXTENSIONS:
-        candidate = CV_DIRECTORY / f"{user_id}{extension}"
-        if candidate.is_file():
-            return candidate
+    candidate = CV_DIRECTORY / f"{user_id}.json"
+    if candidate.is_file():
+        return candidate
     return None
 
 
