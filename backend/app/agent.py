@@ -1,6 +1,7 @@
 import os
 from collections.abc import AsyncIterator
 from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 from langchain_core.language_models import BaseChatModel
@@ -85,8 +86,8 @@ async def introduce(cv_text: str | None = None) -> str:
     return content.strip()
 
 
-async def stream_introduction(has_cv: bool) -> AsyncIterator[str]:
-    if has_cv:
+async def stream_introduction(cv_path: Path | None) -> AsyncIterator[str]:
+    if cv_path is not None:
         request = (
             "Ein Lebenslauf wurde gefunden. Begrüße die Person und frage, wie du "
             "helfen kannst. Verwende ausschließlich einen klar erkennbaren Namen "
